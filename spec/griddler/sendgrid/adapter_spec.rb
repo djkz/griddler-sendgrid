@@ -31,7 +31,8 @@ describe Griddler::Sendgrid::Adapter, '.normalize_params' do
           "attachment1": {
             "filename": "photo1.jpg",
             "name": "photo1.jpg",
-            "type": "image/jpeg"
+            "type": "image/jpeg",
+            "content-id": "5866e4a943fd8_43f946d853108373ab@4ae2c7be-dbe3-46b7-9d15-0a69e63689b2.mail\"
           }
         }
       eojson
@@ -59,7 +60,8 @@ describe Griddler::Sendgrid::Adapter, '.normalize_params' do
           "attachment1": {
             "filename": "sendgrid-filename1.jpg",
             "name": "photo1.jpg",
-            "type": "image/jpeg"
+            "type": "image/jpeg",
+            "content-id": "5866e4a943fd8_43f946d853108373ab@4ae2c7be-dbe3-46b7-9d15-0a69e63689b2.mail\"
           }
         }
       eojson
@@ -69,6 +71,61 @@ describe Griddler::Sendgrid::Adapter, '.normalize_params' do
 
     attachments.first.original_filename.should eq "sendgrid-filename1.jpg"
     attachments.second.original_filename.should eq "sendgrid-filename2.jpg"
+    print attachments.inspect
+  end
+
+  it "only included attachments" do
+    params = default_params.merge(
+      attachments: "2",
+      attachment1: upload_1,
+      attachment2: upload_2,
+      "attachment-info" => <<-eojson
+        {
+          "attachment2": {
+            "filename": "sendgrid-filename2.jpg",
+            "name": "photo2.jpg",
+            "type": "image/jpeg"
+          },
+          "attachment1": {
+            "filename": "sendgrid-filename1.jpg",
+            "name": "photo1.jpg",
+            "type": "image/jpeg",
+            "content-id": "5866e4a943fd8_43f946d853108373ab@4ae2c7be-dbe3-46b7-9d15-0a69e63689b2.mail\"
+          }
+        }
+      eojson
+    )
+
+    normalized_params = normalize_params(params)
+    normalized_params[:included_attachments].size.should eq 1
+    normalized_params[:included_attachments].first.original_filename.should eq "sendgrid-filename2.jpg"
+  end
+
+  it "only embedded attachments" do
+    params = default_params.merge(
+      attachments: "2",
+      attachment1: upload_1,
+      attachment2: upload_2,
+      "attachment-info" => <<-eojson
+        {
+          "attachment2": {
+            "filename": "sendgrid-filename2.jpg",
+            "name": "photo2.jpg",
+            "type": "image/jpeg"
+          },
+          "attachment1": {
+            "filename": "sendgrid-filename1.jpg",
+            "name": "photo1.jpg",
+            "type": "image/jpeg",
+            "content-id": "5866e4a943fd8_43f946d853108373ab@4ae2c7be-dbe3-46b7-9d15-0a69e63689b2.mail\"
+          }
+        }
+      eojson
+    )
+
+    normalized_params = normalize_params(params)
+    normalized_params[:embedded_attachments].size.should eq 1
+    normalized_params[:embedded_attachments].first.original_filename.should eq "sendgrid-filename1.jpg"
   end
 
   it 'has no attachments' do

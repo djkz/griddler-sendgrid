@@ -16,6 +16,9 @@ module Griddler
           cc: recipients(:cc),
           bcc: get_bcc,
           attachments: attachment_files,
+          included_attachments: included_attachments,
+          embedded_attachments: embedded_attachments,
+
         )
       end
 
@@ -69,7 +72,7 @@ module Griddler
       end
 
       def attachment_files
-        attachment_count.times.map do |index|
+        @attachment_files = attachment_count.times.map do |index|
           extract_file_at(index)
         end
       end
@@ -80,10 +83,15 @@ module Griddler
 
       def extract_file_at(index)
         filename = attachment_filename(index)
+        content_id = attachment_content_id(index)
 
         params.delete("attachment#{index + 1}".to_sym).tap do |file|
           if filename.present?
             file.original_filename = filename
+          end
+          if content_id.present?
+            file.class.module_eval { attr_accessor :content_id }
+            file.content_id = content_id
           end
         end
       end
@@ -92,9 +100,22 @@ module Griddler
         attachment_info.fetch("attachment#{index + 1}", {})["filename"]
       end
 
+      def attachment_content_id(index)
+        attachment_info.fetch("attachment#{index + 1}", {})["content-id"]
+      end
+
       def attachment_info
         @attachment_info ||= JSON.parse(params.delete("attachment-info") || "{}")
       end
+
+      def included_attachments
+        @attachment_files.reject{|f| f.content_id.present? }
+      end
+
+      def embedded_attachments
+        @attachment_files.select{|f| f.content_id.present? }
+      end
+
     end
   end
 end
